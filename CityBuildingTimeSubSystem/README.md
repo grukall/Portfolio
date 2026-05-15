@@ -56,36 +56,8 @@ void UCityBuildingTimeSubSystem::Tick(float DeltaTime)
 ---
 
 ### Timer Lifecycle (상태 전이도)
+<img width="1024" height="559" alt="image" src="https://github.com/user-attachments/assets/20b4d6b6-8b97-4f7d-abf3-dc82328b418f" />
 
-```
-        SetTimer()
-            │
-            ▼
-    ┌───────────────┐     Tick 전에 등록됐으면
-    │    Pending    │ ─────────────────────────────────┐
-    └───────────────┘                                  │
-            │ Tick 이후 PendingSet → Heap 이동          │
-            ▼                                          ▼
-    ┌───────────────┐   PauseTimer()   ┌───────────────┐
-    │    Active     │ ───────────────► │    Paused     │
-    └───────────────┘                  └───────────────┘
-            │ 만료                           │ UnPauseTimer()
-            ▼                               │
-    ┌───────────────┐                        │
-    │   Executing   │ ◄──────────────────────┘
-    └───────────────┘
-         │        │
-    Loop │        │ ClearTimer() during callback
-         │        ▼
-         │  ┌─────────────────────┐
-         │  │ ActivePendingRemoval │ → 다음 Tick에 안전 삭제
-         │  └─────────────────────┘
-         │
-         ▼ (non-loop or loop ends)
-       삭제
-```
-
----
 
 
 #### Handle 설계: Index + Serial Number
