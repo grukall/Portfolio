@@ -7,7 +7,8 @@
 void UCityBuildingTimeSubSystem::OnWorldBeginPlay(UWorld& InWorld)
 {
     Super::OnWorldBeginPlay(InWorld);
-    
+
+    //퍼즈 상태로 시작
     SetGameSpeed(0.f);
 }
 
@@ -33,7 +34,8 @@ void UCityBuildingTimeSubSystem::Tick(float DeltaTime)
     if (GameSpeed <= 0.0f) return;
 
     LastTickedFrame = GFrameCounter;
-    
+
+    //배속 반영된 만큼 DeltaTIme 더하기
     InternalTime += (double)DeltaTime * (double)GameSpeed;
     
     while (ActiveTimerHeap.Num() > 0)
@@ -41,10 +43,12 @@ void UCityBuildingTimeSubSystem::Tick(float DeltaTime)
         FGameTimeTimerHandle TopHandle = ActiveTimerHeap.HeapTop();
         FTimeSystemTimerData& TopData = Timers[TopHandle.Index];
 
+        //만료시간이 가장 가까운 타이머를 검사, 아직 시간이 안되었다면 다음 프레임으로 넘어간다.
         if (InternalTime < TopData.ExpireTime) break;
 
         ActiveTimerHeap.HeapPop(TopHandle, FCityTimerHeapOrder(Timers), EAllowShrinking::No);
 
+        //타이머가 삭제 대기 중이라면, 삭제 후 다음 타이머로 넘어간다.
         if (TopData.Status == ECityTimerStatus::ActivePendingRemoval)
         {
             CleanupHandle(TopHandle, TopData.ObjectKey);
@@ -52,38 +56,43 @@ void UCityBuildingTimeSubSystem::Tick(float DeltaTime)
             continue;
         }
         
-        // ★ [수정] 객체가 유효한지 먼저 체크합니다. ★
-        // IsBound()는 바인딩된 UObject가 PendingKill 상태이거나 null이면 false를 반환합니다.
+        // 객체가 유효한지 먼저 체크
         if (!TopData.TimerDelegate.IsBound())
         {
-            // 객체가 죽었으므로 타이머를 즉시 폐기합니다.
+            // 객체가 죽었으므로 타이머를 즉시 폐기
             CleanupHandle(TopHandle, TopData.ObjectKey);
             Timers.RemoveAt(TopHandle.Index);
             continue; 
         }
-        
+
+        //loop 타이머 중, 두 번 이상 불려야 하는지 계산
         int32 CallCount = TopData.bLoop ? FMath::TruncToInt((InternalTime - TopData.ExpireTime) / (double)TopData.Rate) + 1 : 1;
         TopData.Status = ECityTimerStatus::Executing;
 
+        //불러야 하는 횟수만큼 호출
         for (int32 i = 0; i < CallCount; ++i)
         {
             TopData.TimerDelegate.Execute();
             if (TopData.Status == ECityTimerStatus::ActivePendingRemoval) break;
         }
 
+        //루프 타이머는 다시 힙에 넣는다.
         if (TopData.bLoop && TopData.Status != ECityTimerStatus::ActivePendingRemoval)
         {
             TopData.ExpireTime += (double)CallCount * (double)TopData.Rate;
             TopData.Status = ECityTimerStatus::Active;
             ActiveTimerHeap.HeapPush(TopHandle, FCityTimerHeapOrder(Timers));
         }
+
+        //그렇지 않다면 제거
         else
         {
             CleanupHandle(TopHandle, TopData.ObjectKey);
             Timers.RemoveAt(TopHandle.Index);
         }
     }
-    
+
+    //이번 Tick에 타이머를 처리할 동안, 새롭게 생성되어 대기 중인 타이머들을 Heap에 넣는다.
     if (PendingTimerSet.Num() > 0)
     {
         for (FGameTimeTimerHandle Handle : PendingTimerSet)
@@ -140,41 +149,51 @@ FGameTimeTimerHandle UCityBuildingTimeSubSystem::InternalSetTimer(FGameTimeTimer
         ClearTimer(InOutHandle);
     }
 
+    //0초 타이머는 허용하지 않는다.
     if (InRate <= 0.f && InFirstDelay <= 0.f)
     {
         InOutHandle.Invalidate();
         return InOutHandle;
     }
 
-    // 2. 타이머 데이터 생성
+    //1. 타이머 데이터 생성
+    //타이머 시스템 내에서 필요한 데이터를 들고 있다.
     FTimeSystemTimerData NewTimer;
     NewTimer.TimerDelegate = MoveTemp(InDelegate);
     NewTimer.Rate = InRate;
     NewTimer.bLoop = bInLoop;
 
     const float FirstDelay = (InFirstDelay >= 0.f) ? InFirstDelay : InRate;
-    
+
+    //SparsArray에 타이머 데이터 저장
     int32 NewIndex = Timers.Add(MoveTemp(NewTimer));
-    
+
+    //2. 타이머 핸들러 생성
+    //타이머 호출자가 접근할 핸들러이다.
     FGameTimeTimerHandle NewHandle;
     NewHandle.Index = NewIndex;
     NewHandle.SerialNumber = ++LastSerialNumber;
     
     FTimeSystemTimerData& Data = Timers[NewIndex];
     Data.Handle = NewHandle;
-    
+
+    //객체를 TMap에 저장, 객체가 유효하지 않으면 일괄 해제를 위함
     if (const void* Key = Data.TimerDelegate.GetBoundObject())
     {
         Data.ObjectKey = Key;
         ObjectToTimerHandles.FindOrAdd(Key).Add(NewHandle);
     }
-    
+
+    //Tick이 이미 실행되었다면, Heap에 바로 넣는다.
     if (HasBeenTickedThisFrame())
     {
         Data.ExpireTime = InternalTime + (double)FirstDelay;
         Data.Status = ECityTimerStatus::Active;
         ActiveTimerHeap.HeapPush(NewHandle, FCityTimerHeapOrder(Timers));
     }
+
+    //Tick 실행 전이라면, 대기 Set에 넣는다, Tick 마지막에 추가될 예정
+    //Tick 중간에 Heap에 넣으면, Heap이 가장 빠른 타이머를 pop한다는 일관성이 깨진다.
     else
     {
         Data.ExpireTime = (double)FirstDelay;
