@@ -254,14 +254,11 @@ protected:
 
 	* : 디른 어떤 액션도 할 수 있지만 취소 되진 않는다.
  */
-public:
+private:
 	FNewAction CurNewAction;
 
 	UPROPERTY(Replicated)
 	int32 CurActionType;
-	
-private:
-	
 
 	//타이머
 	FTimerHandle ActionHandle;
@@ -318,8 +315,7 @@ public:
  */
 	UFUNCTION(BlueprintCallable)
 	virtual bool Attack();
-	bool bAttackStarted = false;
-	
+
 	void Dash();
 	UFUNCTION(Server, Reliable)
 	virtual void Server_Dash(ENoWeaponDash InDashSide);
@@ -648,6 +644,19 @@ public:
 	float GetRApRatio() const { return RApRatio; }
 	float GetAttackSpeed() const  {return AttackSpeed;}
 	void SetAttackSpeed(float InAttackSpeed) {AttackSpeed = InAttackSpeed;}
+	UProjectileShooterComponent* GetProjectileShooterComp() const { return ProjectileShooterComp; }
+	ENoWeaponDash GetDashSide() const { return DashSide; }
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MC_ShockParticle(bool bInShocked);
+
+	UFUNCTION(Client, Reliable)
+	void CL_TickUpdate(float IncreaseAmount);
+
+	UFUNCTION(Client, Reliable)
+	void CL_TickUpdateEnd();
+
+private:
 /*
  임시 객체, 정보들
  CombatComponent 내에서 구현을 위해 잠시 저장된 객체나 정보들
@@ -656,7 +665,7 @@ public:
 	//Enum
 	UPROPERTY()
 	ENoWeaponDash DashSide;
-	
+
 	UPROPERTY()
 	UProjectileShooterComponent *ProjectileShooterComp;
 
@@ -669,7 +678,7 @@ public:
 	FTimerHandle ShockTimerHandle;
 	FTimerHandle StealthHandle;
 	FTimerHandle DarkMagicOrbHandle;
-	
+
 	FTimerHandle AttackComboHandle;
 	FTimerHandle SkillComboHandle;
 
@@ -685,19 +694,9 @@ public:
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UMaterialInterface> StealthMaterial;
 
-	
 	//Info
 	FVector DecalLocation;
-	
+
 	//Crosshair, 값이 커지면 벌어지고, 값이 작아지면 줄어든다.
 	float ProjectileSpread = 0.f;
-	
-	UFUNCTION(NetMulticast, Reliable)
-	void MC_ShockParticle(bool bInShocked);
-	
-	UFUNCTION(Client, Reliable)
-	void CL_TickUpdate(float IncreaseAmount);
-
-	UFUNCTION(Client, Reliable)
-	void CL_TickUpdateEnd();
 };
