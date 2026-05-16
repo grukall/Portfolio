@@ -10,7 +10,7 @@
 ## Overview
 
 도시 건설 시뮬레이션은 플레이어가 게임 속 시간 흐름 속도를 직접 제어(일시정지/1배속/4배속/32배속)해야 합니다.  
-이 시스템은 `FTimerManager`와 동일한 인터페이스를 유지하면서, 독립적인 시뮬레이션 시간 축과 게임 내 달력 시스템을 함께 제공하는 UWorldSubsystem입니다.
+이 시스템은 `FTimerManager`의 코드를 기본 골격 및 인터페이스를 유지하면서, 독립적인 시뮬레이션 시간 축과 게임 내 달력 시스템을 함께 제공하는 UWorldSubsystem입니다.
 
 <img width="689" height="466" alt="image" src="https://github.com/user-attachments/assets/103cb884-5acb-49de-9c9c-29f481cd3d89" />
 
@@ -18,23 +18,13 @@
 
 UE5에는 시간 흐름을 제어하는 두 가지 방법이 있지만, 둘 다 city-building 시뮬레이션에 적합하지 않습니다.
 
-**① Global Time Dilation — `FTimerManager` 타이머에는 반영되지만, Dilation = 0 시 렌더링과 플레이어 입력까지 동결됩니다**  
-Global TimeDilation은 World DeltaTime 자체를 스케일하므로 `FTimerManager` 타이머가 배속에 반응합니다.  
-그러나 일시정지(Dilation = 0)를 하면 엔진 전체가 멈춰 카메라 조작, UI 입력, 렌더링 업데이트가 모두 불가능해집니다.  
+① Global Time Dilation
+
+일시정지(Dilation = 0)를 하면 엔진 전체가 멈춰 카메라 조작, UI 입력, 렌더링 업데이트가 모두 불가능해집니다.  
 City builder의 일시정지는 "시뮬레이션만 멈추고, 플레이어는 계속 지도를 둘러볼 수 있어야 한다"는 요구사항을 충족할 수 없습니다.
 
-이 시스템은 `GameSpeed = 0`일 때 Tick 내부에서만 early return합니다. 엔진은 계속 동작하고 시뮬레이션 시간 축만 정지됩니다.
+② Custom Time Dilation  
 
-```cpp
-void UCityBuildingTimeSubSystem::Tick(float DeltaTime)
-{
-    if (GameSpeed <= 0.0f) return;  // 시뮬레이션만 정지. 엔진/UI는 계속 동작.
-    InternalTime += (double)DeltaTime * (double)GameSpeed;
-    ...
-}
-```
-
-**② Custom Time Dilation — 액터별 배속 적용은 가능하지만, 진행 중인 `FTimerManager` 타이머에는 반영되지 않습니다**  
 `AActor::CustomTimeDilation`은 해당 액터의 Tick 속도를 개별 조정할 수 있습니다.  
 그러나 `GetWorldTimerManager()`에 등록된 타이머는 World DeltaTime 기준으로 동작하므로, 특정 액터의 CustomTimeDilation 값을 변경해도 이미 등록된 타이머의 만료 시각에는 영향을 주지 않습니다.  
 액터 자신의 배속과 그 액터가 등록한 타이머의 배속이 분리되어 일관성을 보장할 수 없습니다.
@@ -60,7 +50,7 @@ void UCityBuildingTimeSubSystem::Tick(float DeltaTime)
 
 
 
-#### Handle 설계: Index + Serial Number
+#### Handle : Index + Serial Number
 ```
 FGameTimeTimerHandle
 ├── Index        : TSparseArray 슬롯 위치
