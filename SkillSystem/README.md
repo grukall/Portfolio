@@ -45,8 +45,9 @@ SetSkillBase(SkillData, SkillQAction, CombatHelper);
 ## 입력에 따른 스킬 실행 과정
 클라이언트 입력은 즉시 실행되지 않고 서버의 TQueue에 적재된 뒤 순서대로 처리됩니다.  
 같은 프레임에 여러 입력이 몰려도 처리 순서를 보장하고, 액션 처리 중 새 입력이 판정 로직에 끼어드는 재진입 문제를 방지하기 위해서입니다.
-<img width="1440" height="1240" alt="image" src="https://github.com/user-attachments/assets/9365682f-8a9b-4bdb-84de-d5a7fed25df3" />
-
+<p align="center">
+<img width="400" height="600" alt="image" src="https://github.com/user-attachments/assets/ca4252a1-48f3-4d96-b3a0-f0ac98734235" />
+</p>
 
 ---
 
