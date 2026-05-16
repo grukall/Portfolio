@@ -35,7 +35,8 @@ SkillBases[ActionType] = SkillBase;
 ```
 
 `SkillBases`는 `ENewActionType` 크기의 배열이므로 슬롯 인덱스로 O(1) 접근합니다. 새 무기 스킬 추가 시 `SkillData` 테이블에 항목을 추가하고 `USkillBase`를 상속한 클래스를 작성하면 됩니다. 기존 코드를 수정하지 않습니다.
-<img width="1920" height="1080" alt="Spear Combat Helper - 1" src="https://github.com/user-attachments/assets/edb3aa59-0ce6-4597-bcd9-dbce1702cca2" />
+<img width="1569" height="776" alt="image" src="https://github.com/user-attachments/assets/b425ff75-1dc5-4e69-ac2a-11757a1fb2e8" />
+
 
 
 ---
@@ -132,7 +133,7 @@ classDiagram
 ## CombatHelperBase
 
 같은 무기의 SkillBase들(Q, E, R, Attack)은 서로를 직접 참조하지 않습니다. 대신 동일한 `CombatHelperBase` 인스턴스를 공유하며, 이 객체가 **상태 공유와 공통 기능의 중재자** 역할을 합니다.
-<img width="1438" height="641" alt="image" src="https://github.com/user-attachments/assets/45793cce-2dd3-48de-a4cd-0013b9a69fbb" />
+<img width="1350" height="600" alt="image" src="https://github.com/user-attachments/assets/45793cce-2dd3-48de-a4cd-0013b9a69fbb" />
 
 
 ### USingleSwordHelper
